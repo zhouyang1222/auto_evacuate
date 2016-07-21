@@ -1,0 +1,3 @@
+class FilterVmAction(object):
+    pass
+
