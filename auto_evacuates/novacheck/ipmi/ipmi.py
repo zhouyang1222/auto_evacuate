@@ -1,11 +1,13 @@
 from pyghmi import exceptions as pyghmi_exception
 from pyghmi.ipmi import command as ipmi_command
-from novaevacuate.log import logger
-from novaevacuate import exception
+from auto_evacuates.log import logger
+from auto_evacuates import exception
+from ipmi_ip import ipaddr_get
+
 
 class IpmiPower(object):
 
-    def __init__ (self, node, user, passwd):
+    def __init__(self, node, user, passwd):
         """
         :param node: idrac lan enable after config ip address
         :param user: idrac username,dell default root user
@@ -21,7 +23,7 @@ class IpmiPower(object):
         """Get the power status for this node.
 
         :returns: power state POWER_ON, POWER_OFF, or ERROR
-        :raises: IPMIFailure when the novaevacuate ipmi call fails.
+        :raises: IPMIFailure when the auo evacuate ipmi call fails.
         """
         status = []
 
@@ -39,16 +41,16 @@ class IpmiPower(object):
         state = ret.get('powerstate')
 
         if state == 'on':
-            status.append({"node":self.ip, "status":state})
+            status.append({"node": self.ip, "status": state})
             return status
         elif state == 'off':
-            status.append({"node":self.ip, "status":state})
+            status.append({"node": self.ip, "status": state})
             return status
         else:
-            logger.warn("IPMI get power state for node %(node)s"
-                        "returns the following details: %(detail)s"),\
-            {'node':self.ip, 'detail': ret}
-            status.append({"node":self.ip, "status":state})
+            logger.warn("IPMI get power state for node %s"
+                        "returns the following details: %s" %
+                        (self.ip, state))
+            status.append({"node": self.ip, "status": state})
             return status
 
     def _power_off(self):
@@ -114,7 +116,7 @@ class IpmiPower(object):
                                            password=self.passwd)
             ret = ipmicmd.set_power('on')
         except pyghmi_exception.IpmiException as e:
-            error = msg % {'node':self.ip, 'error':e}
+            error = msg % {'node': self.ip, 'error': e}
             logger.error(error)
             raise exception.IPMIFailure(error)
 
@@ -126,6 +128,22 @@ class IpmiPower(object):
         #    logger.error(msg, {'node':self.ip, 'error': error})
         #    raise exception.PowerStateFailure(pstate=state)
 
+
 def get_ipmi_status():
-    s = IpmiPower()
-    s._power_status()
+    """Use get_ipmi_status get ipmi check data,  External interface to other
+
+    :return: one
+    """
+    ip = ipaddr_get()
+    for i in ip:
+        name = i['nodename']
+        node = i['ip']
+        s = IpmiPower(node, user=None, passwd=None)
+        s._power_status()
+
+
+def power_off(node=None, user=None, passwd=None):
+    """power_off shutdown faild node, Use Ipmi_Power function _power_off
+    """
+    s = IpmiPower(node, user, passwd)
+    s._power_off()
