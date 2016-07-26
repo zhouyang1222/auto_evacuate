@@ -23,10 +23,11 @@ class Fence(object):
         # power_off()
 
         # add Fence node to global FENCE_NODES list
-        if node in FENCE_NODES:
+        if node in FENCE_NODES and role == 'service':
             logger.info("%s has been fence status" % node)
         else:
-            FENCE_NODES.append(node)
+            if node not in FENCE_NODES:
+                FENCE_NODES.append(node)
 
             if role == "network":
                 while True:
